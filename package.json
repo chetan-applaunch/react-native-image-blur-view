@@ -1,7 +1,7 @@
 {
   "name": "react-native-image-blur-view",
-  "version": "0.1.4",
-  "description": "this will helps displaying image view having capabilites to blur the image",
+  "version": "0.1.6",
+  "description": "this will helps displaying image view having capabilites to blur the image. Currently, it is made for iOS only",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
   "types": "lib/typescript/index.d.ts",
@@ -34,7 +34,12 @@
   "keywords": [
     "react-native",
     "ios",
-    "android"
+    "android",
+    "blur",
+    "image",
+    "camera",
+    "picker",
+    "objective c"
   ],
   "repository": "https://github.com/chetan-applaunch/react-native-image-blur-view",
   "author": "Chetan Rana <chetan.rana@applaunch.io> (https://github.com/chetan-applaunch)",

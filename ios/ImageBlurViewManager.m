@@ -1,14 +1,18 @@
 #import <React/RCTViewManager.h>
+#import "RCTEventDispatcher.h"
 #import "UIImageView+CoordinateTransform.h"
 #import "UIImage+Common.h"
 #import "UIImage+ImageEffects.h"
 #import "PureLayout.h"
 
-@interface ImageBlurViewManager : RCTViewManager
+
+@interface ImageBlurViewManager: RCTViewManager
 
 @property (strong, nonatomic) NSMutableArray* drawRectArray; //of CGRect
 @property (strong, nonatomic) UIImage* baseImageToBeBlurred;
 @property (strong, nonatomic) UIImageView* imageView;
+@property (strong, nonatomic) NSString *theNewFilePath;
+@property (nonatomic, copy)  RCTDirectEventBlock onEnd;
 
 @end
 
@@ -19,6 +23,7 @@
 #define DEFAULT_ROI_HEIGHT   40
 
 RCT_EXPORT_MODULE(ImageBlurView)
+
 
 - (UIView *)view
 {
@@ -35,9 +40,7 @@ RCT_EXPORT_MODULE(ImageBlurView)
     [self.imageView autoPinEdgeToSuperviewEdge:ALEdgeBottom withInset:90];
     [self.imageView autoPinEdgeToSuperviewEdge:ALEdgeLeft withInset:20];
     [self.imageView autoPinEdgeToSuperviewEdge:ALEdgeRight withInset:20];
-    
-    UIImage *image = [UIImage imageNamed: @"abc.jpg"];
-    [self.imageView setImage: image];
+ 
     [outerView setUserInteractionEnabled:YES];
     
     UIButton *buttonReset = [UIButton buttonWithType:UIButtonTypeRoundedRect];
@@ -76,20 +79,96 @@ RCT_EXPORT_MODULE(ImageBlurView)
     
     [buttonReset addTarget:self action:@selector(buttonResetPressed:) forControlEvents:UIControlEventTouchUpInside];
     [buttonSave addTarget:self action:@selector(buttonSavePressed:) forControlEvents:UIControlEventTouchUpInside];
+      
+    _theNewFilePath = NULL;
         
     return outerView;
 }
 
+RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
+{
+    if(json!=NULL){
+            UIImage * image = [UIImage imageWithContentsOfFile:json];
+          //  UIImage *image = [UIImage imageNamed: @"abc.jpg"];
+             self.baseImageToBeBlurred = image;
+             [self.imageView setImage: image];
+             _theNewFilePath = NULL;
+            
+            UIPanGestureRecognizer *panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+            [panGestureRecognizer setDelegate:nil];
+            [self.imageView addGestureRecognizer:panGestureRecognizer];
+        }else{
+            [self buildAlert:@"Error" message:@"Image not available at path"];
+        }
+}
 
+
+-(NSString*)getPathForFile:(NSString*)searchFilename {
+    
+    NSString *filePATH = @"";
+    
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *documentsDirectory = [paths objectAtIndex:0];
+    NSDirectoryEnumerator *direnum = [[NSFileManager defaultManager] enumeratorAtPath:documentsDirectory];
+
+    NSString *documentsSubpath;
+    while (documentsSubpath = [direnum nextObject])
+    {
+      if ([documentsSubpath.lastPathComponent isEqual:searchFilename]) {
+          filePATH = documentsSubpath;
+          NSLog(@"found %@", documentsSubpath);
+          break;
+      }
+
+    }
+        
+    return filePATH;
+}
+
+//https://doc.ebichu.cc/react-native/releases/0.41/docs/native-modules-ios.html
 - (void)buttonSavePressed:(UIButton *)button {
      NSLog(@"Save Button Pressed");
-    UIImageWriteToSavedPhotosAlbum(self.imageView.image, self, @selector(image:didFinishSavingWithError:contextInfo:), nil);
+    // UIImageWriteToSavedPhotosAlbum(self.imageView.image, self, @selector(image:didFinishSavingWithError:contextInfo:), nil);
+    
+     NSData *data = UIImageJPEGRepresentation(self.imageView.image,1.0);
+    _theNewFilePath = [self persistFile:data];
+     [self.bridge.eventDispatcher sendAppEventWithName:@"BlurImageEvent" body:@{@"path": _theNewFilePath}];
+
 }
 
 - (void)buttonResetPressed:(UIButton *)button {
-     NSLog(@"Reset Button Pressed");
-     self.imageView.image = [UIImage imageNamed:@"abc.jpg"];
-     self.baseImageToBeBlurred = self.imageView.image;
+        NSLog(@"Reset Button Pressed");
+        self.imageView.image = self.baseImageToBeBlurred;
+  }
+
+- (NSString*) getTmpDirectory {
+    NSString *TMP_DIRECTORY = @"react-native-image-blur-view/";
+    NSString *tmpFullPath = [NSTemporaryDirectory() stringByAppendingString:TMP_DIRECTORY];
+    
+    BOOL isDir;
+    BOOL exists = [[NSFileManager defaultManager] fileExistsAtPath:tmpFullPath isDirectory:&isDir];
+    if (!exists) {
+        [[NSFileManager defaultManager] createDirectoryAtPath: tmpFullPath
+                                  withIntermediateDirectories:YES attributes:nil error:nil];
+    }
+    
+    return tmpFullPath;
+}
+
+
+- (NSString*) persistFile:(NSData*)data {
+    // create temp file
+    NSString *tmpDirFullPath = [self getTmpDirectory];
+    NSString *filePath = [tmpDirFullPath stringByAppendingString:[[NSUUID UUID] UUIDString]];
+    filePath = [filePath stringByAppendingString:@".jpg"];
+    
+    // save cropped file
+    BOOL status = [data writeToFile:filePath atomically:YES];
+    if (!status) {
+        return nil;
+    }
+    
+    return filePath;
 }
 
 
@@ -97,27 +176,16 @@ RCT_EXPORT_MODULE(ImageBlurView)
  
     CGPoint pointTranslation = [recognizer locationInView:self.imageView];
     CGPoint imageTouchPoint = [self.imageView pixelPointFromViewPoint:pointTranslation];
+
     //Check if it's within UIImage's bounds
     if(!CGPointEqualToPoint(imageTouchPoint, CGPointZero)){
-        NSLog(@"%s It's inside image's bounds",__PRETTY_FUNCTION__);
+        //NSLog(@"%s It's inside image's bounds",__PRETTY_FUNCTION__);
         //Extract the region of interest of that image
         CGRect rectOfInterest = {imageTouchPoint, CGSizeMake(DEFAULT_ROI_WIDTH, DEFAULT_ROI_HEIGHT)};
         [self blurRegionOfInterest:rectOfInterest];
-
     }else{
         NSLog(@"Touch is outside image's bounds");
     }
-}
-
-
-RCT_CUSTOM_VIEW_PROPERTY(color, NSString, UIView)
-{
-   NSLog(@">>>>>>> color is %@",json);
-   [view setBackgroundColor:[self hexStringToColor:json]];
-
-   UIPanGestureRecognizer *panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
-   [panGestureRecognizer setDelegate:nil];
-   [self.imageView addGestureRecognizer:panGestureRecognizer];
 }
 
 - hexStringToColor:(NSString *)stringToConvert
