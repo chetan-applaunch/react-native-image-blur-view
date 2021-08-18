@@ -1,0 +1,6 @@
+module Pods_ImageBlurViewExample {
+  umbrella header "Pods-ImageBlurViewExample-umbrella.h"
+
+  export *
+  module * { export * }
+}

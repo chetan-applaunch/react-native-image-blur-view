@@ -1,0 +1,21 @@
+{
+  "name": "react-native-image-blur-view",
+  "version": "0.1.3",
+  "summary": "this will helps displaying image view having capabilites to blur the image",
+  "homepage": "https://github.com/chetan-applaunch/react-native-image-blur-view#readme",
+  "license": "MIT",
+  "authors": "Chetan Rana <chetan.rana@applaunch.io> (https://github.com/chetan-applaunch)",
+  "platforms": {
+    "ios": "10.0"
+  },
+  "source": {
+    "git": "https://github.com/chetan-applaunch/react-native-image-blur-view.git",
+    "tag": "0.1.3"
+  },
+  "source_files": "ios/**/*.{h,m,mm}",
+  "dependencies": {
+    "React-Core": [
+
+    ]
+  }
+}
