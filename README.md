@@ -7,6 +7,12 @@ this will helps displaying image view having capabilites to blur the image. Curr
 ```sh
 npm install react-native-image-blur-view
 ```
+then link the package 
+
+```sh
+npx react-native link
+```
+and then, do the "pod install"
 
 ## Usage
 
