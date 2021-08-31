@@ -70,9 +70,17 @@
     UIGraphicsBeginImageContextWithOptions(self.size, NO, 0.0);
     [self drawInRect:CGRectMake(0.0, 0.0, self.size.width, self.size.height)];
     [inputImage drawInRect:frame];
-    UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
+    UIImage *newImage = nil;
+    @autoreleasepool {
+        // ...
+        newImage = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+    }
     return newImage;
+
+//    UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
+//    UIGraphicsEndImageContext();
+//    return [newImage autorelease];
 }
 
 -(UIImage*) drawOverlayWithColor:(UIColor*) color

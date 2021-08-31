@@ -4,7 +4,10 @@
 #import "UIImage+Common.h"
 #import "UIImage+ImageEffects.h"
 #import "PureLayout.h"
-
+typedef enum {
+    DrawBlurContinuously,
+    DrawBlurInARect
+} InputMethod;
 
 @interface ImageBlurViewManager: RCTViewManager
 
@@ -13,14 +16,15 @@
 @property (strong, nonatomic) UIImageView* imageView;
 @property (strong, nonatomic) NSString *theNewFilePath;
 @property (nonatomic, copy)  RCTDirectEventBlock onEnd;
+@property (nonatomic) InputMethod inputMethod;
 
 @end
 
 @implementation ImageBlurViewManager
 
 #define IS_OS_8_OR_LATER    ([[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0)
-#define DEFAULT_ROI_WIDTH   40
-#define DEFAULT_ROI_HEIGHT   40
+#define DEFAULT_ROI_WIDTH   150
+#define DEFAULT_ROI_HEIGHT   150
 
 RCT_EXPORT_MODULE(ImageBlurView)
 
@@ -29,18 +33,19 @@ RCT_EXPORT_MODULE(ImageBlurView)
 {
     UIView *outerView = [[UIView alloc] init];
 
-    self.imageView = [[UIImageView alloc] init];
-    [self.imageView setUserInteractionEnabled:YES];
-   
-    [outerView addSubview:self.imageView];
+//    self.imageView = [[UIImageView alloc] init];
+    self.imageView = [[UIImageView alloc] initWithFrame:CGRectMake(14, UIScreen.mainScreen.bounds.size.height/2 - (UIScreen.mainScreen.bounds.size.width - 40)/2, UIScreen.mainScreen.bounds.size.width - 40 , UIScreen.mainScreen.bounds.size.width - 40)];
     self.imageView.contentMode = UIViewContentModeScaleAspectFit;
+
+//    self.imageView = [[UIImageView alloc] initWithFrame:CGRectMake(UIScreen.mainScreen.bounds.size.width/2 - 300/2, UIScreen.mainScreen.bounds.size.height/2 - 300/2, 300, 300)];
+    [self.imageView setUserInteractionEnabled:YES];
+    [outerView addSubview:self.imageView];
     
-    [self.imageView configureForAutoLayout];
-    [self.imageView autoPinEdgeToSuperviewEdge:ALEdgeTop withInset:20];
-    [self.imageView autoPinEdgeToSuperviewEdge:ALEdgeBottom withInset:90];
-    [self.imageView autoPinEdgeToSuperviewEdge:ALEdgeLeft withInset:20];
-    [self.imageView autoPinEdgeToSuperviewEdge:ALEdgeRight withInset:20];
- 
+//    [self.imageView configureForAutoLayout];
+//    [self.imageView autoPinEdgeToSuperviewEdge:ALEdgeTop withInset:20];
+//    [self.imageView autoPinEdgeToSuperviewEdge:ALEdgeBottom withInset:90];
+//    [self.imageView autoPinEdgeToSuperviewEdge:ALEdgeLeft withInset:20];
+//    [self.imageView autoPinEdgeToSuperviewEdge:ALEdgeRight withInset:20];
     [outerView setUserInteractionEnabled:YES];
     
     UIButton *buttonReset = [UIButton buttonWithType:UIButtonTypeRoundedRect];
@@ -81,25 +86,27 @@ RCT_EXPORT_MODULE(ImageBlurView)
     [buttonSave addTarget:self action:@selector(buttonSavePressed:) forControlEvents:UIControlEventTouchUpInside];
       
     _theNewFilePath = NULL;
-        
+    self.inputMethod = DrawBlurContinuously;
+
     return outerView;
 }
 
 RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
 {
     if(json!=NULL){
-            UIImage * image = [UIImage imageWithContentsOfFile:json];
-          //  UIImage *image = [UIImage imageNamed: @"abc.jpg"];
-             self.baseImageToBeBlurred = image;
-             [self.imageView setImage: image];
-             _theNewFilePath = NULL;
-            
-            UIPanGestureRecognizer *panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
-            [panGestureRecognizer setDelegate:nil];
-            [self.imageView addGestureRecognizer:panGestureRecognizer];
-        }else{
-            [self buildAlert:@"Error" message:@"Image not available at path"];
+        UIImage *image = [UIImage imageWithContentsOfFile:json];
+        @autoreleasepool {
+            self.baseImageToBeBlurred = image;
+            [self.imageView setImage: image];
         }
+        _theNewFilePath = NULL;
+        UIPanGestureRecognizer *panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+        [panGestureRecognizer setDelegate:nil];
+        [self.imageView addGestureRecognizer:panGestureRecognizer];
+
+    }else{
+        [self buildAlert:@"Error" message:@"Image not available at path"];
+    }
 }
 
 
@@ -129,11 +136,9 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
 - (void)buttonSavePressed:(UIButton *)button {
      NSLog(@"Save Button Pressed");
     // UIImageWriteToSavedPhotosAlbum(self.imageView.image, self, @selector(image:didFinishSavingWithError:contextInfo:), nil);
-    
      NSData *data = UIImageJPEGRepresentation(self.imageView.image,1.0);
     _theNewFilePath = [self persistFile:data];
      [self.bridge.eventDispatcher sendAppEventWithName:@"BlurImageEvent" body:@{@"path": _theNewFilePath}];
-
 }
 
 - (void)buttonResetPressed:(UIButton *)button {
@@ -144,14 +149,12 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
 - (NSString*) getTmpDirectory {
     NSString *TMP_DIRECTORY = @"react-native-image-blur-view/";
     NSString *tmpFullPath = [NSTemporaryDirectory() stringByAppendingString:TMP_DIRECTORY];
-    
     BOOL isDir;
     BOOL exists = [[NSFileManager defaultManager] fileExistsAtPath:tmpFullPath isDirectory:&isDir];
     if (!exists) {
         [[NSFileManager defaultManager] createDirectoryAtPath: tmpFullPath
                                   withIntermediateDirectories:YES attributes:nil error:nil];
     }
-    
     return tmpFullPath;
 }
 
@@ -173,19 +176,82 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
 
 
 - (void)handlePan:(UIPanGestureRecognizer *)recognizer {
- 
     CGPoint pointTranslation = [recognizer locationInView:self.imageView];
     CGPoint imageTouchPoint = [self.imageView pixelPointFromViewPoint:pointTranslation];
-
-    //Check if it's within UIImage's bounds
     if(!CGPointEqualToPoint(imageTouchPoint, CGPointZero)){
-        //NSLog(@"%s It's inside image's bounds",__PRETTY_FUNCTION__);
+        NSLog(@"%s It's inside image's bounds",__PRETTY_FUNCTION__);
         //Extract the region of interest of that image
         CGRect rectOfInterest = {imageTouchPoint, CGSizeMake(DEFAULT_ROI_WIDTH, DEFAULT_ROI_HEIGHT)};
-        [self blurRegionOfInterest:rectOfInterest];
+        
+        if(self.inputMethod == DrawBlurContinuously)
+        {
+            // Blur
+            [self blurRegionOfInterest:rectOfInterest];
+            
+        }
+        else if (self.inputMethod == DrawBlurInARect)
+        {
+
+            switch (recognizer.state) {
+                case UIGestureRecognizerStateBegan:
+                    self.drawRectArray = [[NSMutableArray alloc] init];
+                case UIGestureRecognizerStateChanged:
+                {
+                    [self.drawRectArray addObject:[NSValue valueWithCGRect:rectOfInterest]];
+                    rectOfInterest = [self calculateUnionRectOfInterest];
+                    // Draw area selection overlay
+                    [self blurRegionOfInterest:rectOfInterest];
+//                    [self drawOverlayOnRegionOfInterest:rectOfInterest];
+                    break;
+                }
+                case UIGestureRecognizerStateEnded:
+                {
+                    rectOfInterest = [self calculateUnionRectOfInterest];
+                    // Blur
+                    [self blurRegionOfInterest:rectOfInterest];
+                    break;
+                }
+                default:
+                    NSLog(@"Touch is outside image's bounds");
+                    break;
+            }
+        }
     }else{
-        NSLog(@"Touch is outside image's bounds");
+        NSLog(@"%s It's outside image's bounds",__PRETTY_FUNCTION__);
     }
+    //Check if it's within UIImage's bounds
+//    if(!CGPointEqualToPoint(imageTouchPoint, CGPointZero)){
+//        //NSLog(@"%s It's inside image's bounds",__PRETTY_FUNCTION__);
+//        //Extract the region of interest of that image
+//        CGRect rectOfInterest = {imageTouchPoint, CGSizeMake(DEFAULT_ROI_WIDTH, DEFAULT_ROI_HEIGHT)};
+//        [self blurRegionOfInterest:rectOfInterest];
+//    }else{
+//        NSLog(@"Touch is outside image's bounds");
+//    }
+}
+-(CGRect) calculateUnionRectOfInterest
+{
+    //Retrieves the extreme points from each coordinate (x,y)
+    CGFloat minx = [[self.drawRectArray valueForKeyPath:@"@min.x"] floatValue];
+    CGFloat miny = [[self.drawRectArray valueForKeyPath:@"@min.y"] floatValue];
+    CGFloat maxx = [[self.drawRectArray valueForKeyPath:@"@max.x"] floatValue];
+    CGFloat maxy = [[self.drawRectArray valueForKeyPath:@"@max.y"] floatValue];
+    
+    // Calculate Rect we're going to blur later
+    CGRect rectOfInterest = CGRectMake(minx, miny, DEFAULT_ROI_WIDTH + (maxx - minx), DEFAULT_ROI_HEIGHT + (maxy - miny));
+    
+    if(rectOfInterest.size.width < DEFAULT_ROI_WIDTH)
+    {
+        // Vertical Rect
+        rectOfInterest = CGRectMake(minx, miny, DEFAULT_ROI_WIDTH, maxy - miny);
+    }
+    else if (rectOfInterest.size.height < DEFAULT_ROI_HEIGHT)
+    {
+        // Horizontal Rect
+        rectOfInterest = CGRectMake(minx, miny, maxx - minx, DEFAULT_ROI_HEIGHT);
+    }
+    
+    return rectOfInterest;
 }
 
 - hexStringToColor:(NSString *)stringToConvert
