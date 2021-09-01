@@ -273,7 +273,7 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
     //Crop it
     UIImage *croppedImage = [self.baseImageToBeBlurred cropImage:rectOfInterest];
     //Apply a blur effect on it
-    UIImage *effectImage = [croppedImage applyLightEffect];
+    UIImage *effectImage = [croppedImage applyExtraLightEffect];
     //Draw the blurred image on the original image
    
    // UIImageView * imageView=(UIImageView*)[self.view viewWithTag:111];
