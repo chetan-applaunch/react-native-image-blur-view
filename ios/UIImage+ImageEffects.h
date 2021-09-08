@@ -100,6 +100,8 @@
 
 - (UIImage *)applyLightEffect;
 - (UIImage *)applyExtraLightEffect;
+- (UIImage *)applyCustomEffect;
+
 - (UIImage *)applyDarkEffect;
 - (UIImage *)applyTintEffectWithColor:(UIColor *)tintColor;
 
