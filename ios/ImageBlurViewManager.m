@@ -13,6 +13,7 @@ typedef enum {
 
 @property (strong, nonatomic) NSMutableArray* drawRectArray; //of CGRect
 @property (strong, nonatomic) UIImage* baseImageToBeBlurred;
+@property (strong, nonatomic) UIImage* tempImage;
 @property (strong, nonatomic) UIImageView* imageView;
 @property (strong, nonatomic) NSString *theNewFilePath;
 @property (nonatomic, copy)  RCTDirectEventBlock onEnd;
@@ -94,10 +95,10 @@ RCT_EXPORT_MODULE(ImageBlurView)
 RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
 {
     if(json!=NULL){
-        UIImage *image = [UIImage imageWithContentsOfFile:json];
+        self.tempImage = [UIImage imageWithContentsOfFile:json];
         @autoreleasepool {
-            self.baseImageToBeBlurred = image;
-            [self.imageView setImage: image];
+            self.baseImageToBeBlurred = self.tempImage;
+            [self.imageView setImage: self.tempImage];
         }
         _theNewFilePath = NULL;
         UIPanGestureRecognizer *panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
@@ -143,7 +144,10 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
 
 - (void)buttonResetPressed:(UIButton *)button {
         NSLog(@"Reset Button Pressed");
-        self.imageView.image = self.baseImageToBeBlurred;
+    self.imageView.image = nil;
+    self.baseImageToBeBlurred = nil;
+    self.baseImageToBeBlurred = UIImage.new;
+    self.imageView.image = self.tempImage;
   }
 
 - (NSString*) getTmpDirectory {
@@ -170,7 +174,6 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
     if (!status) {
         return nil;
     }
-    
     return filePath;
 }
 
