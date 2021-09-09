@@ -265,7 +265,7 @@
             CGContextClipToMask(outputContext, imageRect, maskImage.CGImage);
         }
         
-        UIImage* roundedImage = [self makeRoundedImage:effectImage radius:20.0f];
+        UIImage* roundedImage = [self makeRoundedImage:effectImage radius:80.0f];
         CGContextDrawImage(outputContext, imageRect, roundedImage.CGImage);
         CGContextRestoreGState(outputContext);
     }
@@ -275,13 +275,12 @@
         CGContextSaveGState(outputContext);
         CGContextSetFillColorWithColor(outputContext, tintColor.CGColor);
         // get our rounded rect as a path
-        CGMutablePathRef path = createRoundedCornerPath(imageRect, 20.0f);
+        CGMutablePathRef path = createRoundedCornerPath(imageRect, 80.0f);
         // add the path to the context
         CGContextAddPath(outputContext, path);
         // draw the path
         CGContextDrawPath(outputContext,kCGPathFill);
-
-        CGContextRestoreGState(outputContext);
+         CGContextRestoreGState(outputContext);
     }
 
     // Output image is ready.
