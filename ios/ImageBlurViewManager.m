@@ -24,8 +24,8 @@ typedef enum {
 @implementation ImageBlurViewManager
 
 #define IS_OS_8_OR_LATER    ([[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0)
-#define DEFAULT_ROI_WIDTH   150
-#define DEFAULT_ROI_HEIGHT   150
+#define DEFAULT_ROI_WIDTH   80
+#define DEFAULT_ROI_HEIGHT   80
 
 RCT_EXPORT_MODULE(ImageBlurView)
 
