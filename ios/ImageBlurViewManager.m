@@ -87,8 +87,10 @@ RCT_EXPORT_MODULE(ImageBlurView)
     [buttonSave addTarget:self action:@selector(buttonSavePressed:) forControlEvents:UIControlEventTouchUpInside];
       
     _theNewFilePath = NULL;
+    // old blur effect (commented by hitesh boricha and chetan rana)
+    /*
     self.inputMethod = DrawBlurContinuously;
-
+     */
     return outerView;
 }
 
@@ -101,7 +103,7 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
             [self.imageView setImage: self.tempImage];
         }
         _theNewFilePath = NULL;
-        UIPanGestureRecognizer *panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+         UIPanGestureRecognizer *panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
         [panGestureRecognizer setDelegate:nil];
         [self.imageView addGestureRecognizer:panGestureRecognizer];
 
@@ -177,7 +179,8 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
     return filePath;
 }
 
-
+// old blur effect (commented by hitesh boricha & chetan rana)
+/*
 - (void)handlePan:(UIPanGestureRecognizer *)recognizer {
     CGPoint pointTranslation = [recognizer locationInView:self.imageView];
     CGPoint imageTouchPoint = [self.imageView pixelPointFromViewPoint:pointTranslation];
@@ -287,7 +290,7 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
     //Shows it up
     self.imageView.image = self.baseImageToBeBlurred;
 }
-
+*/
 
 #pragma mark - Delegate methods
 
@@ -319,5 +322,123 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
 }
 
 
+
+#pragma mark - Croping the Image
+- ( UIImage  *)croppIngimageByImageName:( UIImage  *)imageToCrop toRect:(CGRect)rect{
+     CGImageRef imageRef = CGImageCreateWithImageInRect([imageToCrop CGImage], rect);
+     UIImage  *cropped = [ UIImage  imageWithCGImage:imageRef];
+     CGImageRelease(imageRef);
+     return  cropped;
+}
+
+#pragma mark - Marge two Images
+- ( UIImage  *) addImageToImage:( UIImage  *)img withImage2:( UIImage  *)img2 andRect:(CGRect)cropRect{
+ 
+     CGSize size = CGSizeMake(self.imageView.image.size.width, self.imageView.image.size.height);
+     UIGraphicsBeginImageContext (size);
+     CGPoint pointImg1 = CGPointMake(0,0);
+     [img drawAtPoint:pointImg1];
+     CGPoint pointImg2 = cropRect.origin;
+     [img2 drawAtPoint: pointImg2];
+     UIImage * result =  UIGraphicsGetImageFromCurrentImageContext ();
+     UIGraphicsEndImageContext ();
+     return  result;
+}
+
+#pragma mark - RoundRect the Image
+- ( UIImage  *)roundedRectImageFromImage:( UIImage  *)image withRadious:(CGFloat)radious {
+ 
+     if (radious == 0.0f)
+         return  image;
+ 
+     if ( image !=  nil ) {
+ 
+         CGFloat imageWidth = image.size.width;
+         CGFloat imageHeight = image.size.height;
+ 
+         CGRect rect = CGRectMake(0.0f, 0.0f, imageWidth, imageHeight);
+         UIWindow  *window = [[[ UIApplication  sharedApplication] windows] objectAtIndex:0];
+         const  CGFloat scale = window.screen.scale;
+         UIGraphicsBeginImageContextWithOptions (rect.size,  NO , scale);
+ 
+         CGContextRef context =  UIGraphicsGetCurrentContext ();
+         CGContextBeginPath(context);
+         CGContextSaveGState(context);
+         CGContextTranslateCTM (context, CGRectGetMinX(rect), CGRectGetMinY(rect));
+         CGContextScaleCTM (context, radious, radious);
+ 
+         CGFloat rectWidth = CGRectGetWidth (rect)/radious;
+         CGFloat rectHeight = CGRectGetHeight (rect)/radious;
+ 
+         CGContextMoveToPoint(context, rectWidth, rectHeight/2.0f);
+         CGContextAddArcToPoint(context, rectWidth, rectHeight, rectWidth/2.0f, rectHeight, radious);
+         CGContextAddArcToPoint(context, 0.0f, rectHeight, 0.0f, rectHeight/2.0f, radious);
+         CGContextAddArcToPoint(context, 0.0f, 0.0f, rectWidth/2.0f, 0.0f, radious);
+         CGContextAddArcToPoint(context, rectWidth, 0.0f, rectWidth, rectHeight/2.0f, radious);
+         CGContextRestoreGState(context);
+         CGContextClosePath(context);
+         CGContextClip(context);
+         [image drawInRect:CGRectMake(0.0f, 0.0f, imageWidth, imageHeight)];
+         UIImage  *newImage =  UIGraphicsGetImageFromCurrentImageContext ();
+         UIGraphicsEndImageContext ();
+         return  newImage;
+     }
+     return  nil ;
+}
+
+#pragma mark - handle Pan Methods
+- (void)handlePan:(UIPanGestureRecognizer *)recognizer {
+    UIImage  *croppedImg =  nil ;
+    CGPoint currentPoint = [recognizer locationInView: self.imageView];
+    double  ratioW = self.imageView.image.size.width/self.imageView.frame.size.width ;
+    double  ratioH = self.imageView.image.size.height/self.imageView.frame.size.height;
+    currentPoint.x *= ratioW;
+    currentPoint.y *= ratioH;
+    double  circleSizeW = 30 * ratioW;
+    double  circleSizeH = 30 * ratioH;
+    currentPoint.x = (currentPoint.x - circleSizeW/2<0)? 0 : currentPoint.x - circleSizeW/2;
+    currentPoint.y = (currentPoint.y - circleSizeH/2<0)? 0 : currentPoint.y - circleSizeH/2;
+    CGRect cropRect = CGRectMake(currentPoint.x , currentPoint.y,   circleSizeW,  circleSizeH);
+    NSLog (@ "x %0.0f, y %0.0f, width %0.0f, height %0.0f" , cropRect.origin.x, cropRect.origin.y,   cropRect.size.width,  cropRect.size.height );
+    croppedImg = [ self  croppIngimageByImageName: self .imageView.image toRect:cropRect];
+
+    // Blur Effect
+    croppedImg = [croppedImg imageWithGaussianBlur9];
+    // Contrast Effect
+    // croppedImg = [croppedImg imageWithContrast:50];
+
+    croppedImg = [self roundedRectImageFromImage:croppedImg withRadious:4];
+    self.imageView.image = [self addImageToImage:self.imageView.image withImage2:croppedImg andRect:cropRect];
+    
+}
+
+#pragma mark - Touch Methods for viewcontroller
+/*
+- ( void )touchesMoved:( NSSet  *)touches withEvent:( UIEvent  *)event {
+ 
+     UIImage  *croppedImg =  nil ;
+     UITouch  *touch = [touches anyObject];
+     CGPoint currentPoint = [touch locationInView: self.imageView];
+     double  ratioW = self.imageView.image.size.width/self.imageView.frame.size.width ;
+     double  ratioH = self.imageView.image.size.height/self.imageView.frame.size.height;
+     currentPoint.x *= ratioW;
+     currentPoint.y *= ratioH;
+     double  circleSizeW = 30 * ratioW;
+     double  circleSizeH = 30 * ratioH;
+     currentPoint.x = (currentPoint.x - circleSizeW/2<0)? 0 : currentPoint.x - circleSizeW/2;
+     currentPoint.y = (currentPoint.y - circleSizeH/2<0)? 0 : currentPoint.y - circleSizeH/2;
+     CGRect cropRect = CGRectMake(currentPoint.x , currentPoint.y,   circleSizeW,  circleSizeH);
+     NSLog (@ "x %0.0f, y %0.0f, width %0.0f, height %0.0f" , cropRect.origin.x, cropRect.origin.y,   cropRect.size.width,  cropRect.size.height );
+     croppedImg = [ self  croppIngimageByImageName: self .imageView.image toRect:cropRect];
+ 
+     // Blur Effect
+     croppedImg = [croppedImg imageWithGaussianBlur9];
+     // Contrast Effect
+     // croppedImg = [croppedImg imageWithContrast:50];
+ 
+     croppedImg = [self roundedRectImageFromImage:croppedImg withRadious:4];
+     self.imageView.image = [self addImageToImage:self.imageView.image withImage2:croppedImg andRect:cropRect];
+}
+*/
 
 @end
