@@ -1,6 +1,6 @@
 {
   "name": "react-native-image-blur-view",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "this will helps displaying image view having capabilites to blur the image. Currently it supports iOS platform.",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",

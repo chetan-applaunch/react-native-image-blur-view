@@ -394,8 +394,8 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
     double  ratioH = self.imageView.image.size.height/self.imageView.frame.size.height;
     currentPoint.x *= ratioW;
     currentPoint.y *= ratioH;
-    double  circleSizeW = 30 * ratioW;
-    double  circleSizeH = 30 * ratioH;
+    double  circleSizeW = 20 * ratioW;
+    double  circleSizeH = 20 * ratioH;
     currentPoint.x = (currentPoint.x - circleSizeW/2<0)? 0 : currentPoint.x - circleSizeW/2;
     currentPoint.y = (currentPoint.y - circleSizeH/2<0)? 0 : currentPoint.y - circleSizeH/2;
     CGRect cropRect = CGRectMake(currentPoint.x , currentPoint.y,   circleSizeW,  circleSizeH);
