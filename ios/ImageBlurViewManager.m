@@ -11,6 +11,7 @@ typedef enum {
 
 @interface ImageBlurViewManager: RCTViewManager
 
+@property (strong, nonatomic) NSMutableArray* buttonsArray; //of CGRect
 @property (strong, nonatomic) NSMutableArray* drawRectArray; //of CGRect
 @property (strong, nonatomic) UIImage* baseImageToBeBlurred;
 @property (strong, nonatomic) UIImage* tempImage;
@@ -18,7 +19,7 @@ typedef enum {
 @property (strong, nonatomic) NSString *theNewFilePath;
 @property (nonatomic, copy)  RCTDirectEventBlock onEnd;
 @property (nonatomic) InputMethod inputMethod;
-
+@property(retain) NSNumber *circleSize;
 @end
 
 @implementation ImageBlurViewManager
@@ -33,6 +34,7 @@ RCT_EXPORT_MODULE(ImageBlurView)
 - (UIView *)view
 {
     UIView *outerView = [[UIView alloc] init];
+    self.buttonsArray = [[NSMutableArray alloc] init];
 
 //    self.imageView = [[UIImageView alloc] init];
     self.imageView = [[UIImageView alloc] initWithFrame:CGRectMake(14, UIScreen.mainScreen.bounds.size.height/2 - (UIScreen.mainScreen.bounds.size.width - 40)/2, UIScreen.mainScreen.bounds.size.width - 40 , UIScreen.mainScreen.bounds.size.width - 40)];
@@ -41,7 +43,6 @@ RCT_EXPORT_MODULE(ImageBlurView)
 //    self.imageView = [[UIImageView alloc] initWithFrame:CGRectMake(UIScreen.mainScreen.bounds.size.width/2 - 300/2, UIScreen.mainScreen.bounds.size.height/2 - 300/2, 300, 300)];
     [self.imageView setUserInteractionEnabled:YES];
     [outerView addSubview:self.imageView];
-    
 //    [self.imageView configureForAutoLayout];
 //    [self.imageView autoPinEdgeToSuperviewEdge:ALEdgeTop withInset:20];
 //    [self.imageView autoPinEdgeToSuperviewEdge:ALEdgeBottom withInset:90];
@@ -91,7 +92,57 @@ RCT_EXPORT_MODULE(ImageBlurView)
     /*
     self.inputMethod = DrawBlurContinuously;
      */
+    UIButton *blur1 = [[UIButton alloc]initWithFrame:CGRectMake(UIScreen.mainScreen.bounds.size.width - 168, 80, 40, 40)];
+    UIButton *blur2 = [[UIButton alloc]initWithFrame:CGRectMake(UIScreen.mainScreen.bounds.size.width - 105, 86, 30, 30)];
+    UIButton *blur3 = [[UIButton alloc]initWithFrame:CGRectMake(UIScreen.mainScreen.bounds.size.width - 55, 91, 20, 20)];
+    blur1.tag = 20;
+    blur2.tag = 15;
+    blur3.tag = 10;
+    [self.buttonsArray addObject:blur1];
+    [self.buttonsArray addObject:blur2];
+    [self.buttonsArray addObject:blur3];
+    [self visualEffect:blur1];
+    [self visualEffect:blur2];
+    [self visualEffect:blur3];
+    [outerView addSubview:blur1];
+    [outerView addSubview:blur2];
+    [outerView addSubview:blur3];
+    //default first effect is selected
+    self.circleSize = [NSNumber numberWithInt:20];
+    blur1.layer.borderWidth = 2;
+    blur1.layer.borderColor = UIColor.redColor.CGColor;
+
+    [blur1 addTarget:self action:@selector(btnEffectSelectionTap:) forControlEvents:UIControlEventTouchUpInside];
+    [blur2 addTarget:self action:@selector(btnEffectSelectionTap:) forControlEvents:UIControlEventTouchUpInside];
+    [blur3 addTarget:self action:@selector(btnEffectSelectionTap:) forControlEvents:UIControlEventTouchUpInside];
+
     return outerView;
+}
+- (void)btnEffectSelectionTap:(UIButton *)sender {
+        NSLog(@"Reset Button Pressed");
+    for (UIButton *btn in self.buttonsArray)
+    {
+        if (btn.tag == sender.tag) {
+            self.circleSize = [NSNumber numberWithInt:(int)sender.tag];
+            sender.layer.borderWidth = 2;
+            sender.layer.borderColor = UIColor.redColor.CGColor;
+        }else{
+            btn.layer.borderWidth = 0;
+        }
+    }
+  }
+
+- (void)visualEffect:(UIButton *)sender {
+
+    UIVisualEffect *blurEffect;
+    blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleExtraLight];
+    UIVisualEffectView *visualEffectView;
+    visualEffectView = [[UIVisualEffectView alloc]initWithEffect:blurEffect];
+    visualEffectView.frame = sender.bounds;
+    [visualEffectView setUserInteractionEnabled:NO];
+    [sender addSubview:visualEffectView];
+    sender.layer.cornerRadius = sender.frame.size.height/2.0;
+    sender.clipsToBounds = YES;
 }
 
 RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
@@ -394,8 +445,8 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
     double  ratioH = self.imageView.image.size.height/self.imageView.frame.size.height;
     currentPoint.x *= ratioW;
     currentPoint.y *= ratioH;
-    double  circleSizeW = 20 * ratioW;
-    double  circleSizeH = 20 * ratioH;
+    double  circleSizeW = self.circleSize.integerValue * ratioW;
+    double  circleSizeH = self.circleSize.integerValue * ratioH;
     currentPoint.x = (currentPoint.x - circleSizeW/2<0)? 0 : currentPoint.x - circleSizeW/2;
     currentPoint.y = (currentPoint.y - circleSizeH/2<0)? 0 : currentPoint.y - circleSizeH/2;
     CGRect cropRect = CGRectMake(currentPoint.x , currentPoint.y,   circleSizeW,  circleSizeH);
