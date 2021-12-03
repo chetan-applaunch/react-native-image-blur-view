@@ -4,6 +4,7 @@
 #import "UIImage+Common.h"
 #import "UIImage+ImageEffects.h"
 #import "PureLayout.h"
+#import "HBScrollableImageView.h"
 typedef enum {
     DrawBlurContinuously,
     DrawBlurInARect
@@ -15,7 +16,7 @@ typedef enum {
 @property (strong, nonatomic) NSMutableArray* drawRectArray; //of CGRect
 @property (strong, nonatomic) UIImage* baseImageToBeBlurred;
 @property (strong, nonatomic) UIImage* tempImage;
-@property (strong, nonatomic) UIImageView* imageView;
+@property (strong, nonatomic) HBScrollableImageView* imageView;
 @property (strong, nonatomic) NSString *theNewFilePath;
 @property (nonatomic, copy)  RCTDirectEventBlock onEnd;
 @property (nonatomic) InputMethod inputMethod;
@@ -33,11 +34,12 @@ RCT_EXPORT_MODULE(ImageBlurView)
 
 - (UIView *)view
 {
+    
     UIView *outerView = [[UIView alloc] init];
     self.buttonsArray = [[NSMutableArray alloc] init];
 
 //    self.imageView = [[UIImageView alloc] init];
-    self.imageView = [[UIImageView alloc] initWithFrame:CGRectMake(14, UIScreen.mainScreen.bounds.size.height/2 - (UIScreen.mainScreen.bounds.size.width - 40)/2, UIScreen.mainScreen.bounds.size.width - 40 , UIScreen.mainScreen.bounds.size.width - 40)];
+    self.imageView = [[HBScrollableImageView alloc] initWithFrame:CGRectMake(14, UIScreen.mainScreen.bounds.size.height/2 - (UIScreen.mainScreen.bounds.size.width - 40)/2, UIScreen.mainScreen.bounds.size.width - 40 , UIScreen.mainScreen.bounds.size.width - 40)];
     self.imageView.contentMode = UIViewContentModeScaleAspectFit;
 
 //    self.imageView = [[UIImageView alloc] initWithFrame:CGRectMake(UIScreen.mainScreen.bounds.size.width/2 - 300/2, UIScreen.mainScreen.bounds.size.height/2 - 300/2, 300, 300)];
@@ -156,7 +158,7 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
         _theNewFilePath = NULL;
          UIPanGestureRecognizer *panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
         [panGestureRecognizer setDelegate:nil];
-        [self.imageView addGestureRecognizer:panGestureRecognizer];
+        [self.imageView.scrollView addGestureRecognizer:panGestureRecognizer];
 
     }else{
         [self buildAlert:@"Error" message:@"Image not available at path"];
@@ -459,14 +461,17 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
     // croppedImg = [croppedImg imageWithContrast:50];
 
     croppedImg = [self roundedRectImageFromImage:croppedImg withRadious:4];
-    self.imageView.image = [self addImageToImage:self.imageView.image withImage2:croppedImg andRect:cropRect];
+    self.imageView.isFirst = YES;
+    
+    [self.imageView setImage:[self addImageToImage:self.imageView.image withImage2:croppedImg andRect:cropRect]];
+//    self.imageView.image = [self addImageToImage:self.imageView.image withImage2:croppedImg andRect:cropRect];
+//    self.imageView.scrollView.maximumZoomScale = self.imageView.maximumZoomScale;
     
 }
 
 #pragma mark - Touch Methods for viewcontroller
 /*
 - ( void )touchesMoved:( NSSet  *)touches withEvent:( UIEvent  *)event {
- 
      UIImage  *croppedImg =  nil ;
      UITouch  *touch = [touches anyObject];
      CGPoint currentPoint = [touch locationInView: self.imageView];
