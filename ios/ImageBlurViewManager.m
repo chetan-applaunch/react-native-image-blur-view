@@ -159,7 +159,6 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
          UIPanGestureRecognizer *panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
         [panGestureRecognizer setDelegate:nil];
         [self.imageView.scrollView addGestureRecognizer:panGestureRecognizer];
-
     }else{
         [self buildAlert:@"Error" message:@"Image not available at path"];
     }
@@ -167,13 +166,10 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
 
 
 -(NSString*)getPathForFile:(NSString*)searchFilename {
-    
     NSString *filePATH = @"";
-    
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString *documentsDirectory = [paths objectAtIndex:0];
     NSDirectoryEnumerator *direnum = [[NSFileManager defaultManager] enumeratorAtPath:documentsDirectory];
-
     NSString *documentsSubpath;
     while (documentsSubpath = [direnum nextObject])
     {
@@ -442,27 +438,25 @@ RCT_CUSTOM_VIEW_PROPERTY(imagePath, NSString, UIView)
 #pragma mark - handle Pan Methods
 - (void)handlePan:(UIPanGestureRecognizer *)recognizer {
     UIImage  *croppedImg =  nil ;
-    CGPoint currentPoint = [recognizer locationInView: self.imageView];
-    double  ratioW = self.imageView.image.size.width/self.imageView.frame.size.width ;
+    CGPoint currentPoint = [recognizer locationInView: self.imageView.scrollView];
+    double  ratioW = self.imageView.image.size.width/self.imageView.frame.size.width;
     double  ratioH = self.imageView.image.size.height/self.imageView.frame.size.height;
-    currentPoint.x *= ratioW;
-    currentPoint.y *= ratioH;
-    double  circleSizeW = self.circleSize.integerValue * ratioW;
-    double  circleSizeH = self.circleSize.integerValue * ratioH;
+    currentPoint.x *= ratioW / self.imageView.scrollView.zoomScale;
+    currentPoint.y *= ratioH / self.imageView.scrollView.zoomScale;
+    double  circleSizeW = self.circleSize.integerValue * ratioW / self.imageView.scrollView.zoomScale;
+    double  circleSizeH = self.circleSize.integerValue * ratioH / self.imageView.scrollView.zoomScale;
     currentPoint.x = (currentPoint.x - circleSizeW/2<0)? 0 : currentPoint.x - circleSizeW/2;
     currentPoint.y = (currentPoint.y - circleSizeH/2<0)? 0 : currentPoint.y - circleSizeH/2;
-    CGRect cropRect = CGRectMake(currentPoint.x , currentPoint.y,   circleSizeW,  circleSizeH);
+    CGRect cropRect = CGRectMake(currentPoint.x, currentPoint.y,   circleSizeW,  circleSizeH);
+    
     NSLog (@ "x %0.0f, y %0.0f, width %0.0f, height %0.0f" , cropRect.origin.x, cropRect.origin.y,   cropRect.size.width,  cropRect.size.height );
-    croppedImg = [ self  croppIngimageByImageName: self .imageView.image toRect:cropRect];
-
+    croppedImg = [self croppIngimageByImageName: self.imageView.image toRect:cropRect];
     // Blur Effect
     croppedImg = [croppedImg imageWithGaussianBlur9];
     // Contrast Effect
     // croppedImg = [croppedImg imageWithContrast:50];
-
     croppedImg = [self roundedRectImageFromImage:croppedImg withRadious:4];
     self.imageView.isFirst = YES;
-    
     [self.imageView setImage:[self addImageToImage:self.imageView.image withImage2:croppedImg andRect:cropRect]];
 //    self.imageView.image = [self addImageToImage:self.imageView.image withImage2:croppedImg andRect:cropRect];
 //    self.imageView.scrollView.maximumZoomScale = self.imageView.maximumZoomScale;
